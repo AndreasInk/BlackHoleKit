@@ -47,10 +47,12 @@ final class ParticleSystem {
     var colorHueBase: CGFloat = 0.08  // Base hue (0.08 = orange, 0.55 = cyan, 0.0 = red)
     var colorSaturation: CGFloat = 0.8  // Color intensity
     var speedMultiplier: CGFloat = 1.0  // Overall motion speed
+    var particleScale: CGFloat = 0.72
     var morphCycleSpeed: CGFloat = 0.52  // Default ~12s cycle (higher = faster)
     var densityWaveStrength: CGFloat = 1.0
     var fallInActivity: CGFloat = 0.7
     var lensingStrength: CGFloat = 1.0
+    var spacetimeWarpStrength: CGFloat = 1.0
     var horizonDrama: CGFloat = 1.0
     var photonFlashStrength: CGFloat = 0.0
     var sideFlareStrength: CGFloat = 0.0
@@ -473,6 +475,7 @@ final class ParticleSystem {
         let visualMorphStrength = currentMorphStrength * currentMorphWave
         let rareFlare = flarePulse()
         let flash = rareFlare * max(0.35, photonFlashStrength)
+        let particleSizeScale = max(0.15, particleScale) * (1.0 + visualMorphStrength * 0.25)
         
         // Event horizon size shrinks more when morphing (particles escape)
         let eventHorizonScale = 1.0 - visualMorphStrength * 0.25
@@ -535,6 +538,15 @@ final class ParticleSystem {
             )
         )
 
+        drawSpacetimeWarpField(
+            in: context,
+            size: size,
+            center: center,
+            eventHorizonRadius: eventHorizonRadius,
+            visualMorphStrength: visualMorphStrength,
+            flash: flash
+        )
+
         drawCinematicLensingBand(
             in: context,
             center: center,
@@ -577,7 +589,7 @@ final class ParticleSystem {
                 let saturation = max(0.2, colorSaturation * 0.8 - morphColorShift * 0.3)
                 let brightness = 0.25 + morphColorShift * 0.5  // Brighter when morphing
                 let color = Color(hue: Double(hue), saturation: Double(saturation), brightness: Double(brightness * p.brightness))
-                let particleSize = p.baseSize * (0.8 + morphColorShift * 0.3)
+                let particleSize = p.baseSize * (0.8 + morphColorShift * 0.3) * particleSizeScale
                 let opacity = pulse * p.brightness
                 
                 drawParticle(in: baseCtx, position: p.position, size: particleSize, glowSize: particleSize * 2.0, color: color, opacity: opacity, sharpness: morphColorShift)
@@ -589,7 +601,7 @@ final class ParticleSystem {
                 let hue = colorHueBase + p.hueShift * 0.05  // Use mode-based hue
                 let saturation = max(0.15, colorSaturation * 0.5 - sparkle * 0.1)
                 let color = Color(hue: Double(hue), saturation: Double(saturation), brightness: 1.0)
-                let particleSize = p.baseSize * (0.9 + sparkle * 0.4 + morphColorShift * 0.2 + flash * 0.75 + photonFlashStrength * 0.18)
+                let particleSize = p.baseSize * (0.9 + sparkle * 0.4 + morphColorShift * 0.2 + flash * 0.75 + photonFlashStrength * 0.18) * particleSizeScale
                 let opacity = (flicker + sparkle * 0.3 + morphColorShift * 0.2 + flash * 1.2 + photonFlashStrength * 0.2) * p.brightness
                 
                 let speed = hypot(p.velocity.dx, p.velocity.dy)
@@ -674,7 +686,7 @@ final class ParticleSystem {
                 
                 let color = Color(red: Double(r), green: Double(g), blue: Double(b))
                 
-                let particleSize = p.baseSize * (1.15 - 0.36 * min(1.0, normalizedDist) + morphColorShift * 0.2 + hotBand * 0.55 + fallIn * 0.8 + innerHeat * beaming * 0.22)
+                let particleSize = p.baseSize * (1.15 - 0.36 * min(1.0, normalizedDist) + morphColorShift * 0.2 + hotBand * 0.55 + fallIn * 0.8 + innerHeat * beaming * 0.22) * particleSizeScale
                 let opacity = (0.2 + 0.7 * beaming * flicker + morphColorShift * 0.15 + sideFlare * 0.45 + flareSide * 0.7) * p.brightness * spiral * clump
                 let glowSize = particleSize * (2.5 + 1.5 * (1.0 - min(1.0, normalizedDist)) + hotBand * 1.6 + fallIn * 2.2)
                 
@@ -776,6 +788,167 @@ final class ParticleSystem {
             height: lensRadius * 2
         )
         lensCtx.stroke(Path(ellipseIn: lensRect), with: .color(Color(red: 0.85, green: 0.9, blue: 1.0)), lineWidth: 0.6)
+    }
+
+    private func drawSpacetimeWarpField(
+        in context: GraphicsContext,
+        size: CGSize,
+        center: CGPoint,
+        eventHorizonRadius: CGFloat,
+        visualMorphStrength: CGFloat,
+        flash: CGFloat
+    ) {
+        let blackHoleVisibility = 1.0 - smoothstep(min(1.0, max(0.0, visualMorphStrength * 1.25)))
+        let strength = max(0.0, spacetimeWarpStrength) * blackHoleVisibility
+        guard strength > 0.015 else { return }
+
+        let maxRadius = min(min(size.width, size.height) * 0.52, blackHoleRadius * 5.1)
+        guard maxRadius > eventHorizonRadius * 1.8 else { return }
+
+        var meshCtx = context
+        meshCtx.blendMode = .plusLighter
+
+        let silver = Color(red: 0.82, green: 0.9, blue: 1.0)
+        let hotEdge = Color(hue: Double(colorHueBase + 0.03), saturation: Double(min(1.0, colorSaturation * 0.85)), brightness: 1.0)
+        let coldEdge = Color(red: 0.42, green: 0.58, blue: 0.82)
+        let gradient = Gradient(colors: [
+            coldEdge.opacity(0.06),
+            silver.opacity(0.58 + flash * 0.18),
+            hotEdge.opacity(0.38 + flash * 0.18),
+            Color.white.opacity(0.24),
+            coldEdge.opacity(0.05)
+        ])
+
+        for ringIndex in 0..<8 {
+            let t = CGFloat(ringIndex) / 7.0
+            let radius = eventHorizonRadius * (1.55 + t * 4.05)
+            guard radius <= maxRadius else { continue }
+
+            let opacity = (0.28 + 0.16 * (1.0 - t)) * strength * (1.0 + flash * 0.4)
+            let lineWidth = (0.55 + 1.25 * pow(1.0 - t, 1.6)) * strength
+
+            var ringCtx = meshCtx
+            ringCtx.opacity = opacity
+            ringCtx.stroke(
+                warpedEllipsePath(
+                    center: center,
+                    radius: radius,
+                    verticalScale: 0.34 + t * 0.22,
+                    yaw: 0.42 + 0.05 * CGFloat(sin(time * 0.18)),
+                    rippleAmount: eventHorizonRadius * (0.06 + 0.10 * (1.0 - t)) * strength,
+                    phase: CGFloat(time) * (0.35 + 0.12 * t) + t * 3.4
+                ),
+                with: .linearGradient(
+                    gradient,
+                    startPoint: CGPoint(x: center.x - radius, y: center.y - radius * 0.6),
+                    endPoint: CGPoint(x: center.x + radius, y: center.y + radius * 0.6)
+                ),
+                lineWidth: lineWidth
+            )
+        }
+
+        for spokeIndex in 0..<10 {
+            let angle = CGFloat(spokeIndex) / 10.0 * .pi * 2 + CGFloat(time) * 0.08
+            var spokeCtx = meshCtx
+            spokeCtx.opacity = 0.085 * strength * (1.0 + flash * 0.25)
+            spokeCtx.stroke(
+                warpedSpokePath(
+                    center: center,
+                    angle: angle,
+                    startRadius: eventHorizonRadius * 1.35,
+                    endRadius: maxRadius * 0.92,
+                    verticalScale: 0.48,
+                    yaw: 0.42,
+                    rippleAmount: eventHorizonRadius * 0.12 * strength,
+                    phase: CGFloat(time) * 0.45 + CGFloat(spokeIndex)
+                ),
+                with: .linearGradient(
+                    Gradient(colors: [
+                        Color.clear,
+                        silver.opacity(0.42),
+                        hotEdge.opacity(0.26),
+                        Color.clear
+                    ]),
+                    startPoint: center,
+                    endPoint: CGPoint(
+                        x: center.x + cos(angle) * maxRadius,
+                        y: center.y + sin(angle) * maxRadius * 0.48
+                    )
+                ),
+                lineWidth: 0.35 + 0.5 * strength
+            )
+        }
+    }
+
+    private func warpedEllipsePath(
+        center: CGPoint,
+        radius: CGFloat,
+        verticalScale: CGFloat,
+        yaw: CGFloat,
+        rippleAmount: CGFloat,
+        phase: CGFloat
+    ) -> Path {
+        let segments = 144
+        var path = Path()
+
+        for index in 0...segments {
+            let progress = CGFloat(index) / CGFloat(segments)
+            let angle = progress * .pi * 2
+            let ripple = sin(angle * 3.0 + phase) * rippleAmount + sin(angle * 7.0 - phase * 0.7) * rippleAmount * 0.32
+            let r = radius + ripple
+            let x = cos(angle) * r
+            let y = sin(angle) * r * verticalScale
+            let rotated = rotate(x: x, y: y, yaw: yaw)
+            let point = CGPoint(x: center.x + rotated.x, y: center.y + rotated.y)
+
+            if index == 0 {
+                path.move(to: point)
+            } else {
+                path.addLine(to: point)
+            }
+        }
+
+        return path
+    }
+
+    private func warpedSpokePath(
+        center: CGPoint,
+        angle: CGFloat,
+        startRadius: CGFloat,
+        endRadius: CGFloat,
+        verticalScale: CGFloat,
+        yaw: CGFloat,
+        rippleAmount: CGFloat,
+        phase: CGFloat
+    ) -> Path {
+        let segments = 28
+        var path = Path()
+
+        for index in 0...segments {
+            let t = CGFloat(index) / CGFloat(segments)
+            let radius = startRadius + (endRadius - startRadius) * t
+            let shear = sin(t * .pi * 2.0 + phase) * rippleAmount * (1.0 - t * 0.45)
+            let warpedAngle = angle + shear / max(1.0, radius)
+            let x = cos(warpedAngle) * radius
+            let y = sin(warpedAngle) * radius * verticalScale
+            let rotated = rotate(x: x, y: y, yaw: yaw)
+            let point = CGPoint(x: center.x + rotated.x, y: center.y + rotated.y)
+
+            if index == 0 {
+                path.move(to: point)
+            } else {
+                path.addLine(to: point)
+            }
+        }
+
+        return path
+    }
+
+    private func rotate(x: CGFloat, y: CGFloat, yaw: CGFloat) -> CGPoint {
+        CGPoint(
+            x: x * cos(yaw) - y * sin(yaw),
+            y: x * sin(yaw) + y * cos(yaw)
+        )
     }
     
     private func drawParticle(in context: GraphicsContext, position: CGPoint, size: CGFloat, glowSize: CGFloat, color: Color, opacity: CGFloat, sharpness: CGFloat = 0.0) {
@@ -924,7 +1097,8 @@ final class ParticleSystem {
         let rimZone = max(0, 1.0 - abs(distFromCenter - blackHoleRadius * 1.25) / (blackHoleRadius * 0.9))
         let intersectionBoost = pow(intersectionZone, 2.0) * 0.5 + pow(rimZone, 2.0) * 0.45 * lensingStrength
         
-        let particleSize = p.baseSize * (1.1 - 0.3 * min(1.0, normalizedDist) + morphColorShift * 0.2 + intersectionBoost * 0.3 + rareFlare * 0.35)
+        let particleSizeScale = max(0.15, particleScale) * (1.0 + visualMorphStrength * 0.25)
+        let particleSize = p.baseSize * (1.1 - 0.3 * min(1.0, normalizedDist) + morphColorShift * 0.2 + intersectionBoost * 0.3 + rareFlare * 0.35) * particleSizeScale
         let opacity = (0.25 + 0.45 * beaming * flicker + morphColorShift * 0.12 + intersectionBoost * 0.25 + rareFlare * 0.45) * p.brightness * 0.85
         let glowSize = particleSize * (2.2 + 1.2 * (1.0 - min(1.0, normalizedDist)) + intersectionBoost * 1.5 + lensingStrength * 0.45)
         

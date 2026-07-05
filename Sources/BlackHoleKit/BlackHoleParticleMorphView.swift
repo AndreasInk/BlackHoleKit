@@ -138,6 +138,11 @@ private struct ParticleMorphCoreView: View {
             to: visualConfig.speedMultiplier,
             amount: easing
         )
+        smoothedVisualConfig.particleScale = lerp(
+            from: smoothedVisualConfig.particleScale,
+            to: visualConfig.particleScale,
+            amount: easing
+        )
         smoothedVisualConfig.morphCycleSpeed = lerp(
             from: smoothedVisualConfig.morphCycleSpeed,
             to: visualConfig.morphCycleSpeed,
@@ -146,6 +151,7 @@ private struct ParticleMorphCoreView: View {
         smoothedVisualConfig.densityWaveStrength = lerp(from: smoothedVisualConfig.densityWaveStrength, to: visualConfig.densityWaveStrength, amount: easing)
         smoothedVisualConfig.fallInActivity = lerp(from: smoothedVisualConfig.fallInActivity, to: visualConfig.fallInActivity, amount: easing)
         smoothedVisualConfig.lensingStrength = lerp(from: smoothedVisualConfig.lensingStrength, to: visualConfig.lensingStrength, amount: easing)
+        smoothedVisualConfig.spacetimeWarpStrength = lerp(from: smoothedVisualConfig.spacetimeWarpStrength, to: visualConfig.spacetimeWarpStrength, amount: easing)
         smoothedVisualConfig.horizonDrama = lerp(from: smoothedVisualConfig.horizonDrama, to: visualConfig.horizonDrama, amount: easing)
         smoothedVisualConfig.photonFlashStrength = lerp(from: smoothedVisualConfig.photonFlashStrength, to: visualConfig.photonFlashStrength, amount: easing)
         smoothedVisualConfig.sideFlareStrength = lerp(from: smoothedVisualConfig.sideFlareStrength, to: visualConfig.sideFlareStrength, amount: easing)
@@ -156,10 +162,12 @@ private struct ParticleMorphCoreView: View {
         system.system.colorSaturation = smoothedVisualConfig.colorSaturation
         system.system.speedMultiplier = smoothedVisualConfig.speedMultiplier
         system.system.maxSpeed = 400.0 * smoothedVisualConfig.speedMultiplier
+        system.system.particleScale = smoothedVisualConfig.particleScale
         system.system.morphCycleSpeed = smoothedVisualConfig.morphCycleSpeed
         system.system.densityWaveStrength = smoothedVisualConfig.densityWaveStrength
         system.system.fallInActivity = smoothedVisualConfig.fallInActivity
         system.system.lensingStrength = smoothedVisualConfig.lensingStrength
+        system.system.spacetimeWarpStrength = smoothedVisualConfig.spacetimeWarpStrength
         system.system.horizonDrama = smoothedVisualConfig.horizonDrama
         system.system.photonFlashStrength = smoothedVisualConfig.photonFlashStrength
         system.system.sideFlareStrength = smoothedVisualConfig.sideFlareStrength

@@ -11,6 +11,9 @@ public struct BlackHoleParticleVisualConfig: Equatable {
     /// Overall particle motion multiplier. Set this to `0` for nearly static previews.
     public var speedMultiplier: CGFloat
 
+    /// Multiplier applied to particle cores, trails, and glows.
+    public var particleScale: CGFloat
+
     /// Speed of the shape-to-black-hole morph cycle. The default is roughly a twelve second loop.
     public var morphCycleSpeed: CGFloat
 
@@ -22,6 +25,9 @@ public struct BlackHoleParticleVisualConfig: Equatable {
 
     /// Strength of the curved light band around the event horizon.
     public var lensingStrength: CGFloat
+
+    /// Strength of the metallic spacetime warp field visible when a morph target is not formed.
+    public var spacetimeWarpStrength: CGFloat
 
     /// Contrast and persistence of the dark event horizon.
     public var horizonDrama: CGFloat
@@ -39,10 +45,12 @@ public struct BlackHoleParticleVisualConfig: Equatable {
         colorHue: CGFloat = 0.08,
         colorSaturation: CGFloat = 0.8,
         speedMultiplier: CGFloat = 1.0,
+        particleScale: CGFloat = 0.72,
         morphCycleSpeed: CGFloat = 0.52,
         densityWaveStrength: CGFloat = 1.0,
         fallInActivity: CGFloat = 0.7,
         lensingStrength: CGFloat = 1.0,
+        spacetimeWarpStrength: CGFloat = 1.0,
         horizonDrama: CGFloat = 1.0,
         photonFlashStrength: CGFloat = 0.0,
         sideFlareStrength: CGFloat = 0.0,
@@ -51,10 +59,12 @@ public struct BlackHoleParticleVisualConfig: Equatable {
         self.colorHue = colorHue
         self.colorSaturation = colorSaturation
         self.speedMultiplier = speedMultiplier
+        self.particleScale = particleScale
         self.morphCycleSpeed = morphCycleSpeed
         self.densityWaveStrength = densityWaveStrength
         self.fallInActivity = fallInActivity
         self.lensingStrength = lensingStrength
+        self.spacetimeWarpStrength = spacetimeWarpStrength
         self.horizonDrama = horizonDrama
         self.photonFlashStrength = photonFlashStrength
         self.sideFlareStrength = sideFlareStrength

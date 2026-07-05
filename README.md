@@ -4,6 +4,9 @@ SwiftUI package for the particle morph black hole effect.
 
 The package renders a CPU-driven particle field with SwiftUI `Canvas`. Particles orbit a procedural black hole and can periodically morph into text, SF Symbols, or a built-in classic Mac silhouette before falling back into the accretion flow.
 
+
+
+
 ## Installation
 
 Use it as a local or Git Swift Package dependency:
@@ -27,7 +30,9 @@ struct HeroView: View {
             visualConfig: .init(
                 colorHue: 0.55,
                 colorSaturation: 0.75,
-                speedMultiplier: 0.9
+                speedMultiplier: 0.9,
+                particleScale: 0.72,
+                spacetimeWarpStrength: 1.0
             ),
             particleCount: 1_760
         )
@@ -42,12 +47,14 @@ struct HeroView: View {
 `BlackHoleParticleMorphView` is the main SwiftUI view. It accepts:
 
 - `target`: `.blackHole`, `.classicMac`, `.text(String)`, or `.sfSymbol(String)`.
-- `visualConfig`: hue, saturation, speed, lensing, flare, and disk-motion controls.
+- `visualConfig`: hue, saturation, speed, particle scale, lensing, spacetime warp, flare, and disk-motion controls.
 - `particleCount`: number of simulated particles. The default is `1_760`, or `1_200` in Xcode previews.
 - `pointSampleStep`: raster sampling stride for text and symbol targets. Lower values are more detailed and more expensive.
 - `seed`: deterministic seed for repeatable particle initialization.
 
 `BlackHoleParticleVisualConfig` is intentionally generic. App-specific state mapping should live in the host app.
+
+By default, particles render smaller than the original extraction and the black-hole state includes a metallic spacetime warp mesh. The warp fades out as particles form a text or symbol target, so foreground morphs stay readable.
 
 ## Platform Notes
 
@@ -59,7 +66,7 @@ Supported package floors:
 - macOS 14+
 - visionOS 1+
 
-The package does not include reflection shaders, console overlays, or the separate volumetric visionOS scene. Those are host-app presentation layers.
+The package focuses on the particle morph effect. Reflection shaders, overlays, and separate volumetric scenes belong in the host app's presentation layer.
 
 ## Verification
 
