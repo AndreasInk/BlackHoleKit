@@ -152,6 +152,7 @@ private struct ParticleMorphCoreView: View {
         smoothedVisualConfig.fallInActivity = lerp(from: smoothedVisualConfig.fallInActivity, to: visualConfig.fallInActivity, amount: easing)
         smoothedVisualConfig.lensingStrength = lerp(from: smoothedVisualConfig.lensingStrength, to: visualConfig.lensingStrength, amount: easing)
         smoothedVisualConfig.spacetimeWarpStrength = lerp(from: smoothedVisualConfig.spacetimeWarpStrength, to: visualConfig.spacetimeWarpStrength, amount: easing)
+        smoothedVisualConfig.spaceBackgroundStrength = lerp(from: smoothedVisualConfig.spaceBackgroundStrength, to: visualConfig.spaceBackgroundStrength, amount: easing)
         smoothedVisualConfig.horizonDrama = lerp(from: smoothedVisualConfig.horizonDrama, to: visualConfig.horizonDrama, amount: easing)
         smoothedVisualConfig.photonFlashStrength = lerp(from: smoothedVisualConfig.photonFlashStrength, to: visualConfig.photonFlashStrength, amount: easing)
         smoothedVisualConfig.sideFlareStrength = lerp(from: smoothedVisualConfig.sideFlareStrength, to: visualConfig.sideFlareStrength, amount: easing)
@@ -168,6 +169,7 @@ private struct ParticleMorphCoreView: View {
         system.system.fallInActivity = smoothedVisualConfig.fallInActivity
         system.system.lensingStrength = smoothedVisualConfig.lensingStrength
         system.system.spacetimeWarpStrength = smoothedVisualConfig.spacetimeWarpStrength
+        system.system.spaceBackgroundStrength = smoothedVisualConfig.spaceBackgroundStrength
         system.system.horizonDrama = smoothedVisualConfig.horizonDrama
         system.system.photonFlashStrength = smoothedVisualConfig.photonFlashStrength
         system.system.sideFlareStrength = smoothedVisualConfig.sideFlareStrength

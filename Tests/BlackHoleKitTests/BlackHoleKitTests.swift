@@ -13,6 +13,7 @@ struct BlackHoleKitTests {
             particleScale: 0.62,
             morphCycleSpeed: 0.4,
             spacetimeWarpStrength: 1.2,
+            spaceBackgroundStrength: 0.7,
             photonFlashStrength: 0.25
         )
 
@@ -31,6 +32,7 @@ struct BlackHoleKitTests {
         #expect(view.seed == 42)
         #expect(BlackHoleParticleVisualConfig().particleScale < 1.0)
         #expect(BlackHoleParticleVisualConfig().spacetimeWarpStrength > 0.0)
+        #expect(BlackHoleParticleVisualConfig().spaceBackgroundStrength > 0.0)
     }
 
     @Test func blackHolePointCloudUsesRequestedCountAndCenter() {

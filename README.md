@@ -32,12 +32,12 @@ struct HeroView: View {
                 colorSaturation: 0.75,
                 speedMultiplier: 0.9,
                 particleScale: 0.72,
-                spacetimeWarpStrength: 1.0
+                spacetimeWarpStrength: 1.0,
+                spaceBackgroundStrength: 1.0
             ),
             particleCount: 1_760
         )
         .frame(width: 420, height: 420)
-        .background(Color.black)
     }
 }
 ```
@@ -47,14 +47,14 @@ struct HeroView: View {
 `BlackHoleParticleMorphView` is the main SwiftUI view. It accepts:
 
 - `target`: `.blackHole`, `.classicMac`, `.text(String)`, or `.sfSymbol(String)`.
-- `visualConfig`: hue, saturation, speed, particle scale, lensing, spacetime warp, flare, and disk-motion controls.
+- `visualConfig`: hue, saturation, speed, particle scale, lensing, spacetime warp, background, flare, and disk-motion controls.
 - `particleCount`: number of simulated particles. The default is `1_760`, or `1_200` in Xcode previews.
 - `pointSampleStep`: raster sampling stride for text and symbol targets. Lower values are more detailed and more expensive.
 - `seed`: deterministic seed for repeatable particle initialization.
 
 `BlackHoleParticleVisualConfig` is intentionally generic. App-specific state mapping should live in the host app.
 
-By default, particles render smaller than the original extraction and the black-hole state includes a metallic spacetime warp mesh. The warp fades out as particles form a text or symbol target, so foreground morphs stay readable.
+By default, particles render smaller than the original extraction and the black-hole state includes a mostly black mesh-gradient space background with distant stars. The metallic spacetime warp mesh fades out as particles form a text or symbol target, so foreground morphs stay readable. Set `spaceBackgroundStrength` to `0` if the host app should provide its own background.
 
 ## Platform Notes
 

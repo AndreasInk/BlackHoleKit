@@ -25,6 +25,7 @@ struct BlackHoleSnapshotTests {
         system.blackHoleRadius = blackHole.eventHorizonRadius
         system.particleScale = 0.72
         system.spacetimeWarpStrength = 1.0
+        system.spaceBackgroundStrength = 1.0
         system.lensingStrength = 1.15
         system.initializeAsBlackHole(
             points: blackHole.points,

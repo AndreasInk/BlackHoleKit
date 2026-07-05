@@ -29,6 +29,9 @@ public struct BlackHoleParticleVisualConfig: Equatable {
     /// Strength of the metallic spacetime warp field visible when a morph target is not formed.
     public var spacetimeWarpStrength: CGFloat
 
+    /// Opacity of the built-in dark mesh-gradient space background and distant stars.
+    public var spaceBackgroundStrength: CGFloat
+
     /// Contrast and persistence of the dark event horizon.
     public var horizonDrama: CGFloat
 
@@ -51,6 +54,7 @@ public struct BlackHoleParticleVisualConfig: Equatable {
         fallInActivity: CGFloat = 0.7,
         lensingStrength: CGFloat = 1.0,
         spacetimeWarpStrength: CGFloat = 1.0,
+        spaceBackgroundStrength: CGFloat = 1.0,
         horizonDrama: CGFloat = 1.0,
         photonFlashStrength: CGFloat = 0.0,
         sideFlareStrength: CGFloat = 0.0,
@@ -65,6 +69,7 @@ public struct BlackHoleParticleVisualConfig: Equatable {
         self.fallInActivity = fallInActivity
         self.lensingStrength = lensingStrength
         self.spacetimeWarpStrength = spacetimeWarpStrength
+        self.spaceBackgroundStrength = spaceBackgroundStrength
         self.horizonDrama = horizonDrama
         self.photonFlashStrength = photonFlashStrength
         self.sideFlareStrength = sideFlareStrength

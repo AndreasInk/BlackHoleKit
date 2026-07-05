@@ -53,6 +53,7 @@ final class ParticleSystem {
     var fallInActivity: CGFloat = 0.7
     var lensingStrength: CGFloat = 1.0
     var spacetimeWarpStrength: CGFloat = 1.0
+    var spaceBackgroundStrength: CGFloat = 1.0
     var horizonDrama: CGFloat = 1.0
     var photonFlashStrength: CGFloat = 0.0
     var sideFlareStrength: CGFloat = 0.0
@@ -476,6 +477,13 @@ final class ParticleSystem {
         let rareFlare = flarePulse()
         let flash = rareFlare * max(0.35, photonFlashStrength)
         let particleSizeScale = max(0.15, particleScale) * (1.0 + visualMorphStrength * 0.25)
+
+        drawSpaceBackground(
+            in: context,
+            size: size,
+            center: center,
+            visualMorphStrength: visualMorphStrength
+        )
         
         // Event horizon size shrinks more when morphing (particles escape)
         let eventHorizonScale = 1.0 - visualMorphStrength * 0.25
@@ -790,6 +798,96 @@ final class ParticleSystem {
         lensCtx.stroke(Path(ellipseIn: lensRect), with: .color(Color(red: 0.85, green: 0.9, blue: 1.0)), lineWidth: 0.6)
     }
 
+    private func drawSpaceBackground(
+        in context: GraphicsContext,
+        size: CGSize,
+        center: CGPoint,
+        visualMorphStrength: CGFloat
+    ) {
+        let strength = max(0, min(1, spaceBackgroundStrength))
+        guard strength > 0.01 else { return }
+
+        let bounds = CGRect(origin: .zero, size: size)
+        context.fill(Path(bounds), with: .color(Color.black.opacity(strength)))
+
+        let blackHoleVisibility = 1.0 - smoothstep(min(1.0, max(0.0, visualMorphStrength)))
+        let meshOpacity = strength * (0.22 + blackHoleVisibility * 0.08)
+        let minSide = min(size.width, size.height)
+        let patches: [(CGPoint, CGFloat, Color, CGFloat)] = [
+            (
+                CGPoint(x: size.width * 0.22, y: size.height * 0.25),
+                minSide * 0.58,
+                Color(red: 0.22, green: 0.25, blue: 0.30),
+                0.30
+            ),
+            (
+                CGPoint(x: size.width * 0.82, y: size.height * 0.30),
+                minSide * 0.50,
+                Color(red: 0.16, green: 0.18, blue: 0.23),
+                0.22
+            ),
+            (
+                CGPoint(x: size.width * 0.62, y: size.height * 0.78),
+                minSide * 0.62,
+                Color(red: 0.24, green: 0.24, blue: 0.26),
+                0.24
+            ),
+            (
+                CGPoint(x: center.x + blackHoleRadius * 0.8, y: center.y - blackHoleRadius * 0.2),
+                minSide * 0.42,
+                Color(red: 0.34, green: 0.35, blue: 0.38),
+                0.20
+            )
+        ]
+
+        for patch in patches {
+            context.fill(
+                Path(bounds),
+                with: .radialGradient(
+                    Gradient(colors: [
+                        patch.2.opacity(meshOpacity * patch.3),
+                        patch.2.opacity(meshOpacity * patch.3 * 0.34),
+                        Color.clear
+                    ]),
+                    center: patch.0,
+                    startRadius: 0,
+                    endRadius: patch.1
+                )
+            )
+        }
+
+        var starCtx = context
+        starCtx.blendMode = .plusLighter
+        for index in 0..<150 {
+            let x = pseudoStar(index, salt: 11) * size.width
+            let y = pseudoStar(index, salt: 23) * size.height
+            let radialDistance = hypot(x - center.x, y - center.y)
+            let diskAvoidance = min(1.0, max(0.18, (radialDistance - blackHoleRadius * 2.0) / (blackHoleRadius * 3.2)))
+            let brightnessSeed = pseudoStar(index, salt: 37)
+            let twinkle = 0.72 + 0.28 * CGFloat(sin(time * 0.33 + Double(index) * 1.71))
+            let opacity = (0.05 + pow(brightnessSeed, 5.0) * 0.22) * strength * diskAvoidance * twinkle
+            let starSize = 0.45 + pow(brightnessSeed, 7.0) * 1.25
+            let colorTemperature = pseudoStar(index, salt: 43)
+            let starColor = Color(
+                red: Double(0.78 + colorTemperature * 0.20),
+                green: Double(0.82 + colorTemperature * 0.16),
+                blue: Double(0.90 + colorTemperature * 0.10)
+            )
+
+            var dotCtx = starCtx
+            dotCtx.opacity = opacity
+            dotCtx.fill(
+                Path(ellipseIn: CGRect(
+                    x: x - starSize / 2,
+                    y: y - starSize / 2,
+                    width: starSize,
+                    height: starSize
+                )),
+                with: .color(starColor)
+            )
+        }
+    }
+
     private func drawSpacetimeWarpField(
         in context: GraphicsContext,
         size: CGSize,
@@ -949,6 +1047,12 @@ final class ParticleSystem {
             x: x * cos(yaw) - y * sin(yaw),
             y: x * sin(yaw) + y * cos(yaw)
         )
+    }
+
+    private func pseudoStar(_ index: Int, salt: Int) -> CGFloat {
+        let x = Double(index * 12_989 + salt * 78_233)
+        let s = sin(x * 0.000_731 + Double(salt) * 4.17) * 43_758.5453
+        return CGFloat(s - floor(s))
     }
     
     private func drawParticle(in context: GraphicsContext, position: CGPoint, size: CGFloat, glowSize: CGFloat, color: Color, opacity: CGFloat, sharpness: CGFloat = 0.0) {
