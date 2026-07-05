@@ -4,7 +4,7 @@ Render a SwiftUI particle field that cycles between a procedural black hole and 
 
 ## Overview
 
-`BlackHoleParticleMorphView` owns a deterministic CPU particle simulation and draws it with SwiftUI `Canvas`. The base state is a black hole with an event horizon, photon ring, accretion disk, mostly black star background, lensing band, metallic spacetime warp mesh, and small flare events. When given a non-black-hole target, the particle field periodically forms that target and then falls back into orbital motion.
+`BlackHoleParticleMorphView` owns a deterministic CPU particle simulation and draws it with SwiftUI `Canvas`. The base state is a black hole with an event horizon, photon ring, accretion disk, mostly black rotating star background, lensing band, bundled Metal lens shader, metallic spacetime warp mesh, and small flare events. When given a non-black-hole target, the particle field periodically forms that target and then falls back into orbital motion.
 
 Use the package for decorative or stateful visual surfaces where the black hole itself is the primary effect.
 
@@ -26,6 +26,7 @@ BlackHoleParticleMorphView(
 ### Rendering
 
 - ``BlackHoleParticleMorphView``
+- ``BlackHoleLensModifier``
 
 ### Targets
 

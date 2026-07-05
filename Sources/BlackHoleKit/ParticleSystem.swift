@@ -84,6 +84,10 @@ final class ParticleSystem {
             return 0.0
         }
     }
+
+    var visualMorphStrength: CGFloat {
+        currentMorphStrength * currentMorphWave
+    }
     
     /// Attempt to smooth ease in/out using cubic smoothstep
     private func smoothstep(_ t: CGFloat) -> CGFloat {
@@ -466,6 +470,20 @@ final class ParticleSystem {
     }
 
     func draw(in context: GraphicsContext, size: CGSize) {
+        drawBackground(in: context, size: size)
+        drawForeground(in: context, size: size)
+    }
+
+    func drawBackground(in context: GraphicsContext, size: CGSize) {
+        drawSpaceBackground(
+            in: context,
+            size: size,
+            center: blackHoleCenter,
+            visualMorphStrength: visualMorphStrength
+        )
+    }
+
+    func drawForeground(in context: GraphicsContext, size: CGSize) {
         drawBlackHoleHybrid(in: context, size: size)
     }
     
@@ -473,18 +491,11 @@ final class ParticleSystem {
         let center = blackHoleCenter
         
         // Calculate visual morph state - use the same wave as update
-        let visualMorphStrength = currentMorphStrength * currentMorphWave
+        let visualMorphStrength = self.visualMorphStrength
         let rareFlare = flarePulse()
         let flash = rareFlare * max(0.35, photonFlashStrength)
         let particleSizeScale = max(0.15, particleScale) * (1.0 + visualMorphStrength * 0.25)
 
-        drawSpaceBackground(
-            in: context,
-            size: size,
-            center: center,
-            visualMorphStrength: visualMorphStrength
-        )
-        
         // Event horizon size shrinks more when morphing (particles escape)
         let eventHorizonScale = 1.0 - visualMorphStrength * 0.25
         let eventHorizonRadius = blackHoleRadius * 1.03 * eventHorizonScale
@@ -811,32 +822,37 @@ final class ParticleSystem {
         context.fill(Path(bounds), with: .color(Color.black.opacity(strength)))
 
         let blackHoleVisibility = 1.0 - smoothstep(min(1.0, max(0.0, visualMorphStrength)))
-        let meshOpacity = strength * (0.22 + blackHoleVisibility * 0.08)
+        let meshOpacity = strength * (0.34 + blackHoleVisibility * 0.14)
         let minSide = min(size.width, size.height)
+        let rotationSpeed = max(0.05, speedMultiplier) * (0.08 + blackHoleVisibility * 0.08)
+        let backgroundRotation = CGFloat(time) * rotationSpeed
         let patches: [(CGPoint, CGFloat, Color, CGFloat)] = [
             (
-                CGPoint(x: size.width * 0.22, y: size.height * 0.25),
+                rotate(point: CGPoint(x: size.width * 0.22, y: size.height * 0.25), around: center, angle: backgroundRotation * 0.22),
                 minSide * 0.58,
                 Color(red: 0.22, green: 0.25, blue: 0.30),
-                0.30
+                0.42
             ),
             (
-                CGPoint(x: size.width * 0.82, y: size.height * 0.30),
+                rotate(point: CGPoint(x: size.width * 0.82, y: size.height * 0.30), around: center, angle: -backgroundRotation * 0.18),
                 minSide * 0.50,
                 Color(red: 0.16, green: 0.18, blue: 0.23),
-                0.22
+                0.32
             ),
             (
-                CGPoint(x: size.width * 0.62, y: size.height * 0.78),
+                rotate(point: CGPoint(x: size.width * 0.62, y: size.height * 0.78), around: center, angle: backgroundRotation * 0.16),
                 minSide * 0.62,
                 Color(red: 0.24, green: 0.24, blue: 0.26),
-                0.24
+                0.34
             ),
             (
-                CGPoint(x: center.x + blackHoleRadius * 0.8, y: center.y - blackHoleRadius * 0.2),
+                CGPoint(
+                    x: center.x + cos(backgroundRotation * 0.9) * blackHoleRadius * 1.05,
+                    y: center.y + sin(backgroundRotation * 0.9) * blackHoleRadius * 0.72
+                ),
                 minSide * 0.42,
                 Color(red: 0.34, green: 0.35, blue: 0.38),
-                0.20
+                0.38
             )
         ]
 
@@ -858,15 +874,21 @@ final class ParticleSystem {
 
         var starCtx = context
         starCtx.blendMode = .plusLighter
-        for index in 0..<150 {
+        for index in 0..<520 {
             let x = pseudoStar(index, salt: 11) * size.width
             let y = pseudoStar(index, salt: 23) * size.height
             let radialDistance = hypot(x - center.x, y - center.y)
+            let lensInfluence = max(0, 1.0 - radialDistance / max(1, blackHoleRadius * 8.0))
+            let position = rotate(
+                point: CGPoint(x: x, y: y),
+                around: center,
+                angle: backgroundRotation * 0.28 * lensInfluence
+            )
             let diskAvoidance = min(1.0, max(0.18, (radialDistance - blackHoleRadius * 2.0) / (blackHoleRadius * 3.2)))
             let brightnessSeed = pseudoStar(index, salt: 37)
             let twinkle = 0.72 + 0.28 * CGFloat(sin(time * 0.33 + Double(index) * 1.71))
-            let opacity = (0.05 + pow(brightnessSeed, 5.0) * 0.22) * strength * diskAvoidance * twinkle
-            let starSize = 0.45 + pow(brightnessSeed, 7.0) * 1.25
+            let opacity = (0.045 + pow(brightnessSeed, 4.0) * 0.24) * strength * diskAvoidance * twinkle
+            let starSize = 0.38 + pow(brightnessSeed, 6.0) * 1.35
             let colorTemperature = pseudoStar(index, salt: 43)
             let starColor = Color(
                 red: Double(0.78 + colorTemperature * 0.20),
@@ -878,8 +900,85 @@ final class ParticleSystem {
             dotCtx.opacity = opacity
             dotCtx.fill(
                 Path(ellipseIn: CGRect(
-                    x: x - starSize / 2,
-                    y: y - starSize / 2,
+                    x: position.x - starSize / 2,
+                    y: position.y - starSize / 2,
+                    width: starSize,
+                    height: starSize
+                )),
+                with: .color(starColor)
+            )
+        }
+
+        for index in 0..<760 {
+            let baseAngle = pseudoStar(index, salt: 101) * .pi * 2
+            let radialSeed = pseudoStar(index, salt: 113)
+            let radius = blackHoleRadius * (1.45 + sqrt(radialSeed) * 5.2)
+            let localRotation = backgroundRotation * (1.25 - min(0.7, radius / max(1, blackHoleRadius * 10.0)))
+            let angle = baseAngle + localRotation + 0.05 * CGFloat(sin(time * 0.42 + Double(index) * 0.31))
+            let liveRadius = radius * (1.0 + 0.018 * CGFloat(sin(time * 0.36 + Double(index) * 0.17)))
+            let verticalScale: CGFloat = 0.54 + 0.08 * CGFloat(sin(time * 0.16))
+            let yaw: CGFloat = 0.42
+            let x = cos(angle) * liveRadius
+            let y = sin(angle) * liveRadius * verticalScale
+            let rotated = rotate(x: x, y: y, yaw: yaw)
+            let position = CGPoint(x: center.x + rotated.x, y: center.y + rotated.y)
+            guard bounds.insetBy(dx: -2, dy: -2).contains(position) else { continue }
+
+            let brightnessSeed = pseudoStar(index, salt: 127)
+            let annulusFade = max(0, 1.0 - abs(radius - blackHoleRadius * 3.6) / (blackHoleRadius * 3.2))
+            let opacity = (0.018 + pow(brightnessSeed, 3.0) * 0.09) * strength * (0.45 + annulusFade * 0.75)
+            let dustSize = 0.35 + pow(brightnessSeed, 5.0) * 0.85
+            let dustColor = Color(
+                red: Double(0.42 + brightnessSeed * 0.25),
+                green: Double(0.45 + brightnessSeed * 0.24),
+                blue: Double(0.50 + brightnessSeed * 0.28)
+            )
+
+            var dustCtx = starCtx
+            dustCtx.opacity = opacity
+            dustCtx.fill(
+                Path(ellipseIn: CGRect(
+                    x: position.x - dustSize / 2,
+                    y: position.y - dustSize / 2,
+                    width: dustSize,
+                    height: dustSize
+                )),
+                with: .color(dustColor)
+            )
+        }
+
+        for index in 0..<340 {
+            let baseAngle = pseudoStar(index, salt: 211) * .pi * 2
+            let radialSeed = pseudoStar(index, salt: 223)
+            let radius = blackHoleRadius * (1.9 + sqrt(radialSeed) * 4.0)
+            let localRotation = backgroundRotation * (1.55 - min(0.8, radius / max(1, blackHoleRadius * 8.0)))
+            let angle = baseAngle + localRotation + 0.08 * CGFloat(sin(time * 0.48 + Double(index) * 0.23))
+            let liveRadius = radius * (1.0 + 0.024 * CGFloat(sin(time * 0.52 + Double(index) * 0.19)))
+            let verticalScale: CGFloat = 0.70
+            let yaw: CGFloat = 0.24
+            let x = cos(angle) * liveRadius
+            let y = sin(angle) * liveRadius * verticalScale
+            let rotated = rotate(x: x, y: y, yaw: yaw)
+            let position = CGPoint(x: center.x + rotated.x, y: center.y + rotated.y)
+            guard bounds.insetBy(dx: -2, dy: -2).contains(position) else { continue }
+
+            let brightnessSeed = pseudoStar(index, salt: 239)
+            let innerFade = smoothstep(min(1, max(0, (radius - blackHoleRadius * 1.7) / (blackHoleRadius * 1.2))))
+            let outerFade = max(0, 1.0 - (radius - blackHoleRadius * 4.8) / (blackHoleRadius * 2.0))
+            let opacity = (0.055 + pow(brightnessSeed, 3.0) * 0.22) * strength * innerFade * outerFade
+            let starSize = 0.48 + pow(brightnessSeed, 4.5) * 1.35
+            let starColor = Color(
+                red: Double(0.72 + brightnessSeed * 0.26),
+                green: Double(0.74 + brightnessSeed * 0.24),
+                blue: Double(0.80 + brightnessSeed * 0.18)
+            )
+
+            var lensStarCtx = starCtx
+            lensStarCtx.opacity = opacity
+            lensStarCtx.fill(
+                Path(ellipseIn: CGRect(
+                    x: position.x - starSize / 2,
+                    y: position.y - starSize / 2,
                     width: starSize,
                     height: starSize
                 )),
@@ -1047,6 +1146,13 @@ final class ParticleSystem {
             x: x * cos(yaw) - y * sin(yaw),
             y: x * sin(yaw) + y * cos(yaw)
         )
+    }
+
+    private func rotate(point: CGPoint, around center: CGPoint, angle: CGFloat) -> CGPoint {
+        let x = point.x - center.x
+        let y = point.y - center.y
+        let rotated = rotate(x: x, y: y, yaw: angle)
+        return CGPoint(x: center.x + rotated.x, y: center.y + rotated.y)
     }
 
     private func pseudoStar(_ index: Int, salt: Int) -> CGFloat {

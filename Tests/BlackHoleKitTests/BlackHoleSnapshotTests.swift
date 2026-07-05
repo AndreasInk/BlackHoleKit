@@ -51,14 +51,31 @@ struct BlackHoleSnapshotTests {
             system.setShapeTarget(points, morphStrength: 0.95)
         }
 
-        for _ in 0..<150 {
+        let frameCount = ProcessInfo.processInfo.environment["BLACKHOLEKIT_SNAPSHOT_FRAMES"]
+            .flatMap(Int.init) ?? 150
+        for _ in 0..<frameCount {
             system.update(dt: 1.0 / 60.0)
         }
 
+        let lensStrength = max(0, system.spacetimeWarpStrength) * 0.58 * max(0, 1.0 - system.visualMorphStrength * 1.2)
+        let lensVisibility = min(1, max(0, lensStrength / 0.58))
+
         let view = ZStack {
-            Color.black
             Canvas { context, canvasSize in
-                system.draw(in: context, size: canvasSize)
+                system.drawBackground(in: context, size: canvasSize)
+            }
+            .blackHoleLens(
+                center: .center,
+                radius: max(1, blackHole.eventHorizonRadius * 4.8),
+                strength: lensStrength,
+                spin: 0.46 * lensVisibility,
+                darkness: 0.10 * lensVisibility,
+                glow: 0.16 * lensVisibility,
+                isEnabled: lensStrength > 0.015
+            )
+
+            Canvas { context, canvasSize in
+                system.drawForeground(in: context, size: canvasSize)
             }
         }
         .frame(width: size.width, height: size.height)

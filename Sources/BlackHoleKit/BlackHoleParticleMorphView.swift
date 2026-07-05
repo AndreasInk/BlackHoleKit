@@ -10,7 +10,7 @@ public struct BlackHoleParticleMorphView: View {
     ///
     /// Xcode previews use a lower count to keep preview refreshes responsive.
     public static var defaultParticleCount: Int {
-        ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" ? 1200 : 1760
+        ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" ? 1800 : 2800
     }
 
     public var target: BlackHoleParticleMorphTarget
@@ -96,8 +96,23 @@ private struct ParticleMorphCoreView: View {
     }
 
     var body: some View {
-        Canvas { context, canvasSize in
-            system.system.draw(in: context, size: canvasSize)
+        ZStack {
+            Canvas { context, canvasSize in
+                system.system.drawBackground(in: context, size: canvasSize)
+            }
+            .blackHoleLens(
+                center: .center,
+                radius: metalLensRadius,
+                strength: metalLensStrength,
+                spin: (0.34 + smoothedVisualConfig.spacetimeWarpStrength * 0.12) * metalLensVisibility,
+                darkness: 0.10 * metalLensVisibility,
+                glow: 0.16 * metalLensVisibility,
+                isEnabled: metalLensStrength > 0.015
+            )
+
+            Canvas { context, canvasSize in
+                system.system.drawForeground(in: context, size: canvasSize)
+            }
         }
         .id(frameTick)
         .onReceive(timer) { _ in
@@ -246,4 +261,37 @@ private struct ParticleMorphCoreView: View {
         lastLayoutSize = size
         frameTick &+= 1
     }
+
+    private var metalLensRadius: CGFloat {
+        let minSide = min(size.width, size.height)
+        let baseRadius = system.system.blackHoleRadius > 0 ? system.system.blackHoleRadius : minSide * 0.10
+        return min(max(1, minSide * 0.54), max(1, baseRadius * 4.8))
+    }
+
+    private var metalLensStrength: CGFloat {
+        let morphFade = max(0, 1.0 - system.system.visualMorphStrength * 1.2)
+        let backgroundMask = max(0, min(1, smoothedVisualConfig.spaceBackgroundStrength))
+        return max(0, smoothedVisualConfig.spacetimeWarpStrength) * 0.58 * morphFade * backgroundMask
+    }
+
+    private var metalLensVisibility: CGFloat {
+        min(1, max(0, metalLensStrength / 0.58))
+    }
+}
+
+#Preview {
+    BlackHoleParticleMorphView(
+        target: .blackHole,
+        visualConfig: .init(
+            colorHue: 0.33,
+            speedMultiplier: 0.8,
+            particleScale: 0.72,
+            lensingStrength: 1.2,
+            spacetimeWarpStrength: 1.35,
+            spaceBackgroundStrength: 1.0,
+            horizonDrama: 1.15
+        ),
+        particleCount: 2_800
+    )
+    .frame(width: 560, height: 420)
 }

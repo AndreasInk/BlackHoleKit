@@ -2,7 +2,7 @@
 
 SwiftUI package for the particle morph black hole effect.
 
-The package renders a CPU-driven particle field with SwiftUI `Canvas`. Particles orbit a procedural black hole and can periodically morph into text, SF Symbols, or a built-in classic Mac silhouette before falling back into the accretion flow.
+The package renders a CPU-driven particle field with SwiftUI `Canvas`. Particles orbit a procedural black hole and can periodically morph into text, SF Symbols, or a built-in classic Mac silhouette before falling back into the accretion flow. The built-in background uses a bundled Metal lens shader so the starfield bends and rotates with the black hole.
 
 
 
@@ -48,13 +48,15 @@ struct HeroView: View {
 
 - `target`: `.blackHole`, `.classicMac`, `.text(String)`, or `.sfSymbol(String)`.
 - `visualConfig`: hue, saturation, speed, particle scale, lensing, spacetime warp, background, flare, and disk-motion controls.
-- `particleCount`: number of simulated particles. The default is `1_760`, or `1_200` in Xcode previews.
+- `particleCount`: number of simulated particles. The default is `2_800`, or `1_800` in Xcode previews.
 - `pointSampleStep`: raster sampling stride for text and symbol targets. Lower values are more detailed and more expensive.
 - `seed`: deterministic seed for repeatable particle initialization.
 
 `BlackHoleParticleVisualConfig` is intentionally generic. App-specific state mapping should live in the host app.
 
-By default, particles render smaller than the original extraction and the black-hole state includes a mostly black mesh-gradient space background with distant stars. The metallic spacetime warp mesh fades out as particles form a text or symbol target, so foreground morphs stay readable. Set `spaceBackgroundStrength` to `0` if the host app should provide its own background.
+By default, particles render smaller than the original extraction and the black-hole state includes a mostly black, rotating mesh-gradient space background with distant stars. The bundled Metal lens bends that background behind the event horizon, while the foreground particles stay sharp. The metal warp fades out as particles form a text or symbol target, so foreground morphs stay readable. Set `spaceBackgroundStrength` to `0` if the host app should provide its own background.
+
+`blackHoleLens(...)` is also public as a standalone SwiftUI modifier for applying the same bundled Metal lens to other views.
 
 ## Platform Notes
 
