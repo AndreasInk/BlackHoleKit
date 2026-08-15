@@ -14,7 +14,9 @@ struct BlackHoleKitTests {
             morphCycleSpeed: 0.4,
             spacetimeWarpStrength: 1.2,
             spaceBackgroundStrength: 0.7,
-            photonFlashStrength: 0.25
+            photonFlashStrength: 0.25,
+            showsParticles: false,
+            showsWarp: false
         )
 
         let view = BlackHoleParticleMorphView(
@@ -30,9 +32,75 @@ struct BlackHoleKitTests {
         #expect(view.particleCount == 64)
         #expect(view.pointSampleStep == 4)
         #expect(view.seed == 42)
+        #expect(view.visualConfig.showsParticles == false)
+        #expect(view.visualConfig.showsWarp == false)
         #expect(BlackHoleParticleVisualConfig().particleScale < 1.0)
+        #expect(BlackHoleParticleVisualConfig().showsParticles)
+        #expect(BlackHoleParticleVisualConfig().showsWarp)
         #expect(BlackHoleParticleVisualConfig().spacetimeWarpStrength > 0.0)
         #expect(BlackHoleParticleVisualConfig().spaceBackgroundStrength > 0.0)
+    }
+
+    @Test func particleAndWarpVisibilityControlsHaveIndependentRenderPlans() {
+        let cases: [(showsParticles: Bool, showsWarp: Bool, rendersForeground: Bool, appliesLens: Bool)] = [
+            (true, true, true, true),
+            (true, false, true, false),
+            (false, true, false, true),
+            (false, false, false, false)
+        ]
+
+        for testCase in cases {
+            let config = BlackHoleParticleVisualConfig(
+                showsParticles: testCase.showsParticles,
+                showsWarp: testCase.showsWarp
+            )
+            let plan = BlackHoleParticleRenderPlan(visualConfig: config)
+
+            #expect(plan.rendersForegroundCanvas == testCase.rendersForeground)
+            #expect(plan.appliesMetalLens == testCase.appliesLens)
+        }
+    }
+
+    @Test func lensConfigurationResolvesUnsafeValuesAndLegacyInitializer() {
+        let configuration = BlackHoleLensConfiguration(
+            radius: -20,
+            strength: 8,
+            spin: -8,
+            darkness: 4,
+            glow: 9,
+            causticStrength: -1,
+            chromaticAberration: 5,
+            animationSpeed: 7
+        )
+        let resolved = BlackHoleLensResolvedConfiguration(configuration)
+
+        #expect(resolved.radius == 1)
+        #expect(resolved.strength == 1.5)
+        #expect(resolved.spin == -2)
+        #expect(resolved.darkness == 1)
+        #expect(resolved.glow == 2)
+        #expect(resolved.causticStrength == 0)
+        #expect(resolved.chromaticAberration == 1)
+        #expect(resolved.animationSpeed == 3)
+        #expect(resolved.maxSampleOffset > 1)
+
+        let staticResolved = BlackHoleLensResolvedConfiguration(
+            .init(animationSpeed: -1)
+        )
+        #expect(staticResolved.animationSpeed == 0)
+
+        let legacy = BlackHoleLensModifier(
+            center: .topLeading,
+            radius: 120,
+            strength: 0.7,
+            spin: 0.3,
+            darkness: 0.8,
+            glow: 0.6
+        )
+        #expect(legacy.configuration.center == .topLeading)
+        #expect(legacy.configuration.radius == 120)
+        #expect(legacy.configuration.causticStrength == 0.8)
+        #expect(legacy.configuration.chromaticAberration == 0.35)
     }
 
     @Test func blackHolePointCloudUsesRequestedCountAndCenter() {

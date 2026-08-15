@@ -17,7 +17,7 @@ enum ParticleTargets {
         let holeR = minSide * 0.10
         let photonR = holeR * 1.15
         let innerDiskR = holeR * 1.5
-        let outerDiskR = minSide * 0.48  // Larger disk for more dramatic effect
+        let outerDiskR = minSide * 0.42
 
         var pts: [CGPoint] = []
         var data: [ParticleSystem.ParticleData] = []
@@ -26,8 +26,8 @@ enum ParticleTargets {
 
         // Distribution weights - fewer in event horizon (it's mostly black), more in disk
         let holeCount = Int(CGFloat(desiredCount) * 0.12)
-        let photonCount = Int(CGFloat(desiredCount) * 0.10)
-        let lensRingCount = Int(CGFloat(desiredCount) * 0.18)
+        let photonCount = Int(CGFloat(desiredCount) * 0.055)
+        let lensRingCount = Int(CGFloat(desiredCount) * 0.10)
         let diskCount = max(0, desiredCount - holeCount - photonCount - lensRingCount)
 
         // Event horizon: sparse points inside circle (will be covered by black disk)
@@ -58,13 +58,14 @@ enum ParticleTargets {
             let v = pseudo(i, 62)
             let ang = CGFloat(u) * (.pi * 2)
             
-            // More particles closer to the center (inverse square-ish distribution)
+            // Bias material toward the hot inner disk. `sqrt` would crowd the outer rim
+            // and create a clipped, CD-like silhouette at the horizontal edges.
             let radialT = CGFloat(v)
-            let r = innerDiskR + (outerDiskR - innerDiskR) * sqrt(radialT)
+            let r = innerDiskR + (outerDiskR - innerDiskR) * pow(radialT, 1.55)
             
             // Elliptical tilt + yaw to sell a 3D disk
-            let tilt: CGFloat = 0.78
-            let yaw: CGFloat = 0.55
+            let tilt: CGFloat = 0.38
+            let yaw: CGFloat = 0.14
             let x = cos(ang) * r
             let y = sin(ang) * r * tilt
             let xr = x * cos(yaw) - y * sin(yaw)
@@ -78,15 +79,16 @@ enum ParticleTargets {
         // This represents light from the back of the disk bent around the black hole
         // Ring appears as vertical band passing over/under the black hole
         let lensInnerR = holeR * 1.3
-        let lensOuterR = minSide * 0.46  // Larger lensing ring for dramatic effect
+        let lensOuterR = minSide * 0.30
         for i in 0..<lensRingCount {
             let u = pseudo(i, 71)
             let v = pseudo(i, 72)
             let ang = CGFloat(u) * (.pi * 2)
             
-            // Radial distribution similar to disk
+            // Keep the lensed image close to the photon sphere instead of drawing a
+            // second full-width disk over the real accretion plane.
             let radialT = CGFloat(v)
-            let r = lensInnerR + (lensOuterR - lensInnerR) * sqrt(radialT)
+            let r = lensInnerR + (lensOuterR - lensInnerR) * pow(radialT, 1.7)
             
             // Horizontal lensing ring: wraps left-right around the black hole
             let vertCompress: CGFloat = 0.42  // compressed vertically (depth) - more circular

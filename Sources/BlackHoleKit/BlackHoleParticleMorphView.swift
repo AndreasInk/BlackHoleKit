@@ -93,32 +93,50 @@ private struct ParticleMorphCoreView: View {
         self.seed = seed
         self.visualConfig = visualConfig
         _system = StateObject(wrappedValue: ParticleSystemBox(system: ParticleSystem(seed: seed)))
+        _smoothedVisualConfig = State(initialValue: visualConfig)
     }
 
     var body: some View {
-        ZStack {
-            Canvas { context, canvasSize in
-                system.system.drawBackground(in: context, size: canvasSize)
-            }
-            .blackHoleLens(
-                center: .center,
-                radius: metalLensRadius,
-                strength: metalLensStrength,
-                spin: (0.34 + smoothedVisualConfig.spacetimeWarpStrength * 0.12) * metalLensVisibility,
-                darkness: 0.10 * metalLensVisibility,
-                glow: 0.16 * metalLensVisibility,
-                isEnabled: metalLensStrength > 0.015
-            )
+        // Reading the tick invalidates the Canvas renderers without replacing their identity.
+        // Using `.id(frameTick)` here rebuilt the full Canvas + Metal subtree every frame.
+        let _ = frameTick
+        let renderPlan = BlackHoleParticleRenderPlan(visualConfig: smoothedVisualConfig)
 
-            Canvas { context, canvasSize in
-                system.system.drawForeground(in: context, size: canvasSize)
+        ZStack {
+            if renderPlan.appliesMetalLens {
+                Canvas { context, canvasSize in
+                    system.system.drawBackground(in: context, size: canvasSize)
+                }
+                .blackHoleLens(
+                    center: .center,
+                    radius: metalLensRadius,
+                    strength: metalLensStrength,
+                    spin: (0.34 + smoothedVisualConfig.spacetimeWarpStrength * 0.12) * metalLensVisibility,
+                    darkness: 0.10 * metalLensVisibility,
+                    glow: 0.16 * metalLensVisibility,
+                    isEnabled: metalLensStrength > 0.015
+                )
+            } else {
+                Canvas { context, canvasSize in
+                    system.system.drawBackground(in: context, size: canvasSize)
+                }
+            }
+
+            if renderPlan.rendersForegroundCanvas {
+                Canvas { context, canvasSize in
+                    system.system.drawForeground(in: context, size: canvasSize)
+                }
             }
         }
-        .id(frameTick)
         .onReceive(timer) { _ in
             // Apply visual config every frame to ensure it stays in sync
             applyVisualConfigIfNeeded()
-            system.system.update(dt: 1.0 / 60.0)
+            if smoothedVisualConfig.showsParticles || frameTick.isMultiple(of: 4) {
+                // Keep simulation time continuous while the foreground is hidden, but avoid
+                // paying for 2,800 invisible particle updates on every display refresh.
+                let simulationStep = smoothedVisualConfig.showsParticles ? 1.0 / 60.0 : 4.0 / 60.0
+                system.system.update(dt: simulationStep)
+            }
             frameTick &+= 1
         }
         .onAppear {
@@ -143,6 +161,8 @@ private struct ParticleMorphCoreView: View {
             to: visualConfig.colorHue,
             amount: easing
         )
+        smoothedVisualConfig.showsParticles = visualConfig.showsParticles
+        smoothedVisualConfig.showsWarp = visualConfig.showsWarp
         smoothedVisualConfig.colorSaturation = lerp(
             from: smoothedVisualConfig.colorSaturation,
             to: visualConfig.colorSaturation,
@@ -183,7 +203,6 @@ private struct ParticleMorphCoreView: View {
         system.system.densityWaveStrength = smoothedVisualConfig.densityWaveStrength
         system.system.fallInActivity = smoothedVisualConfig.fallInActivity
         system.system.lensingStrength = smoothedVisualConfig.lensingStrength
-        system.system.spacetimeWarpStrength = smoothedVisualConfig.spacetimeWarpStrength
         system.system.spaceBackgroundStrength = smoothedVisualConfig.spaceBackgroundStrength
         system.system.horizonDrama = smoothedVisualConfig.horizonDrama
         system.system.photonFlashStrength = smoothedVisualConfig.photonFlashStrength
@@ -276,6 +295,20 @@ private struct ParticleMorphCoreView: View {
 
     private var metalLensVisibility: CGFloat {
         min(1, max(0, metalLensStrength / 0.58))
+    }
+}
+
+/// The stable layer contract for the particle and warp visibility controls.
+///
+/// The background always renders. Disabling particles removes the full foreground Canvas while the
+/// timer continues updating the system, and disabling warp avoids constructing the Metal lens layer.
+struct BlackHoleParticleRenderPlan: Equatable {
+    let rendersForegroundCanvas: Bool
+    let appliesMetalLens: Bool
+
+    init(visualConfig: BlackHoleParticleVisualConfig) {
+        rendersForegroundCanvas = visualConfig.showsParticles
+        appliesMetalLens = visualConfig.showsWarp
     }
 }
 

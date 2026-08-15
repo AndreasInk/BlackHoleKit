@@ -2,6 +2,12 @@ import CoreGraphics
 
 /// Visual and motion controls for ``BlackHoleParticleMorphView``.
 public struct BlackHoleParticleVisualConfig: Equatable {
+    /// Whether the particle foreground is rendered. The simulation continues when this is `false`.
+    public var showsParticles: Bool
+
+    /// Whether the Metal spacetime lens is rendered over the background.
+    public var showsWarp: Bool
+
     /// Base hue in SwiftUI's normalized 0...1 hue space. The default is warm orange.
     public var colorHue: CGFloat
 
@@ -58,8 +64,12 @@ public struct BlackHoleParticleVisualConfig: Equatable {
         horizonDrama: CGFloat = 1.0,
         photonFlashStrength: CGFloat = 0.0,
         sideFlareStrength: CGFloat = 0.0,
-        shearOutwardStrength: CGFloat = 0.0
+        shearOutwardStrength: CGFloat = 0.0,
+        showsParticles: Bool = true,
+        showsWarp: Bool = true
     ) {
+        self.showsParticles = showsParticles
+        self.showsWarp = showsWarp
         self.colorHue = colorHue
         self.colorSaturation = colorSaturation
         self.speedMultiplier = speedMultiplier

@@ -52,11 +52,25 @@ struct HeroView: View {
 - `pointSampleStep`: raster sampling stride for text and symbol targets. Lower values are more detailed and more expensive.
 - `seed`: deterministic seed for repeatable particle initialization.
 
-`BlackHoleParticleVisualConfig` is intentionally generic. App-specific state mapping should live in the host app.
+`BlackHoleParticleVisualConfig` is intentionally generic. App-specific state mapping should live in the host app. `showsParticles` and `showsWarp` default to `true` and can be changed independently, covering particles + warp, particles only, warp only, and untouched background.
 
 By default, particles render smaller than the original extraction and the black-hole state includes a mostly black, rotating mesh-gradient space background with distant stars. The bundled Metal lens bends that background behind the event horizon, while the foreground particles stay sharp. The metal warp fades out as particles form a text or symbol target, so foreground morphs stay readable. Set `spaceBackgroundStrength` to `0` if the host app should provide its own background.
 
-`blackHoleLens(...)` is also public as a standalone SwiftUI modifier for applying the same bundled Metal lens to other views.
+`blackHoleLens(...)` is also public as a standalone SwiftUI modifier for applying the same bundled Metal lens to other views. Use `BlackHoleLensConfiguration` to tune center, radius, strength, spin, darkness, glow, caustics, chromatic separation, and animation speed. The cinematic default includes bounded gravitational deflection, an opaque event horizon, nested photon curves, and a refractive shell. The particle foreground owns the accretion disk, Doppler asymmetry, and lensed disk particles so those elements are not duplicated by Metal.
+
+```swift
+desktopPixels.blackHoleLens(
+    configuration: .init(
+        radius: 220,
+        strength: 1.25,
+        spin: 0.9,
+        glow: 1.1,
+        causticStrength: 1.3,
+        chromaticAberration: 0.55
+    )
+)
+```
+
 
 ## Platform Notes
 
@@ -72,14 +86,8 @@ The package focuses on the particle morph effect. Reflection shaders, overlays, 
 
 ## Verification
 
-From this directory:
 
-```sh
-swift build
-swift test
-```
-
-The tests cover the public initializer, deterministic black hole point generation, and particle simulation advancement. Visual quality still requires screenshot or preview inspection in a host app.
+The tests cover defaults, source-compatible forwarding, configuration clamping, and all four particle/warp combinations. The previews cover checkerboards, fine grids, a deterministic photo-like fixture, translucent content, a corner lens, zero strength, and maximum cinematic settings. Live desktop validation still requires Screen Recording permission.
 
 ## License
 
