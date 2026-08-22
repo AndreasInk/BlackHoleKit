@@ -49,7 +49,7 @@ public struct BlackHoleParticleMorphView: View {
 
 @MainActor
 final class ParticleSystemBox: ObservableObject {
-    let system: ParticleSystem
+    var system: ParticleSystem
     @Published var redrawToken: Int = 0
 
     init(system: ParticleSystem) {
@@ -58,6 +58,11 @@ final class ParticleSystemBox: ObservableObject {
 
     func bump() {
         redrawToken &+= 1
+    }
+
+    func replaceSystem(seed: UInt64) {
+        system = ParticleSystem(seed: seed)
+        redrawToken = 0
     }
 }
 
@@ -75,6 +80,9 @@ private struct ParticleMorphCoreView: View {
     @State private var frameTick: Int = 0
     @State private var isInitialized: Bool = false
     @State private var lastLayoutSize: CGSize = .zero
+    @State private var lastParticleCount: Int?
+    @State private var lastPointSampleStep: Int?
+    @State private var lastSeed: UInt64?
 
     private let timer = Timer.publish(every: 1.0 / 60.0, on: .main, in: .common).autoconnect()
 
@@ -232,15 +240,23 @@ private struct ParticleMorphCoreView: View {
     private func syncTargetIfNeeded(animated: Bool) {
         guard size.width > 0, size.height > 0 else { return }
 
+        let effectiveParticleCount = max(0, particleCount)
+        let effectivePointSampleStep = max(1, pointSampleStep)
         let sizeDidChange = !isInitialized || lastLayoutSize != size
+        let particleCountDidChange = !isInitialized || lastParticleCount != effectiveParticleCount
+        let pointSampleStepDidChange = !isInitialized || lastPointSampleStep != effectivePointSampleStep
+        let seedDidChange = !isInitialized || lastSeed != seed
         let targetDidChange = lastTarget != target
 
-        guard !isInitialized || sizeDidChange || targetDidChange else { return }
+        guard !isInitialized || sizeDidChange || particleCountDidChange || pointSampleStepDidChange || seedDidChange || targetDidChange else { return }
 
-        let shouldRebuild = !isInitialized || sizeDidChange
+        let shouldRebuild = !isInitialized || sizeDidChange || particleCountDidChange || seedDidChange
+        if seedDidChange, isInitialized {
+            system.replaceSystem(seed: seed)
+        }
         if shouldRebuild {
             // Rebuild particles on first load and resize so the black hole remains centered.
-            let bhData = ParticleTargets.blackHoleData(in: size, desiredCount: particleCount)
+            let bhData = ParticleTargets.blackHoleData(in: size, desiredCount: effectiveParticleCount)
             system.system.blackHoleCenter = bhData.center
             system.system.blackHoleRadius = bhData.eventHorizonRadius
             system.system.initializeAsBlackHole(
@@ -249,7 +265,7 @@ private struct ParticleMorphCoreView: View {
             )
         }
 
-        if shouldRebuild || targetDidChange {
+        if shouldRebuild || pointSampleStepDidChange || targetDidChange {
             if target == .blackHole {
                 // Pure black hole mode - particles return to orbit
                 system.system.setShapeTarget(nil, morphStrength: 0)
@@ -259,8 +275,8 @@ private struct ParticleMorphCoreView: View {
                     let points = try ParticleTargets.points(
                         for: target,
                         in: size,
-                        sampleStep: pointSampleStep,
-                        desiredCount: particleCount,
+                        sampleStep: effectivePointSampleStep,
+                        desiredCount: effectiveParticleCount,
                         time: 0
                     )
                     system.system.setShapeTarget(points, morphStrength: 0.95)
@@ -278,6 +294,9 @@ private struct ParticleMorphCoreView: View {
         isInitialized = true
         lastTarget = target
         lastLayoutSize = size
+        lastParticleCount = effectiveParticleCount
+        lastPointSampleStep = effectivePointSampleStep
+        lastSeed = seed
         frameTick &+= 1
     }
 

@@ -3,6 +3,13 @@ import SwiftUI
 /// CPU particle system with black hole as the base state.
 /// Particles always orbit the black hole but can be influenced by shape targets.
 final class ParticleSystem {
+
+    enum ParticleLayer: Int {
+        case eventHorizon
+        case photonRing
+        case accretionDisk
+        case lensingRing
+    }
     
     struct Particle {
         var position: CGPoint
@@ -13,7 +20,7 @@ final class ParticleSystem {
         var baseOrbitRadius: CGFloat = 0
         var orbitRadius: CGFloat = 0
         var orbitAngle: CGFloat = 0
-        var layer: Int = 0  // 0=event horizon, 1=photon ring, 2=accretion disk
+        var layer: ParticleLayer = .eventHorizon
         
         // Shape morph target
         var shapeTarget: CGPoint = .zero
@@ -26,19 +33,18 @@ final class ParticleSystem {
         var pulsePhase: CGFloat = 0.0
     }
 
-    private(set) var particles: [Particle] = []
-    private var rng: SeededRNG
-    private(set) var time: Double = 0
+    var particles: [Particle] = []
+    var rng: SeededRNG
+    var time: Double = 0
     
     // Black hole properties (always active)
     var blackHoleCenter: CGPoint = .zero
     var blackHoleRadius: CGFloat = 40.0
     
     // Morph control
-    private var shapeTargets: [CGPoint]? = nil
-    private var currentMorphStrength: CGFloat = 0.0
-    private var targetMorphStrength: CGFloat = 0.0
-    private var morphPulsePhase: CGFloat = 0.0
+    var currentMorphStrength: CGFloat = 0.0
+    var targetMorphStrength: CGFloat = 0.0
+    var morphPulsePhase: CGFloat = 0.0
     
     // Physics tunables
     var maxSpeed: CGFloat = 400.0
@@ -68,86 +74,12 @@ final class ParticleSystem {
         self.rng = SeededRNG(seed: seed)
     }
     
-    /// Attempt to read current morph wave for external access (visual sync)
-    var currentMorphWave: CGFloat {
-        let cyclePos = (morphPulsePhase.truncatingRemainder(dividingBy: CGFloat.pi * 2)) / (CGFloat.pi * 2)
-        if cyclePos < 0.15 {
-            let t = cyclePos / 0.15
-            return smoothstep(t)
-        } else if cyclePos < 0.50 {
-            return 1.0
-        } else if cyclePos < 0.65 {
-            let t = (cyclePos - 0.50) / 0.15
-            return 1.0 - smoothstep(t)
-        } else {
-            return 0.0
-        }
-    }
-
-    var visualMorphStrength: CGFloat {
-        currentMorphStrength * currentMorphWave
-    }
-    
-    /// Attempt to smooth ease in/out using cubic smoothstep
-    private func smoothstep(_ t: CGFloat) -> CGFloat {
-        let x = max(0, min(1, t))
-        return x * x * (3 - 2 * x)
-    }
-    
-    func dampVelocities(_ factor: CGFloat) {
-        let f = max(0, min(1, factor))
-        for i in particles.indices {
-            particles[i].velocity.dx *= f
-            particles[i].velocity.dy *= f
-        }
-    }
-    
     struct ParticleData {
         var orbitRadius: CGFloat
         var orbitAngle: CGFloat
-        var layer: Int
+        var layer: ParticleLayer
     }
     
-    /// Initialize the particle system with black hole as base
-    func initializeAsBlackHole(points: [CGPoint], particleData: [ParticleData]) {
-        particles = points.enumerated().map { (i, p) in
-            let data = particleData[safe: i]
-            return Particle(
-                position: p,
-                velocity: .zero,
-                phase: rng.nextDouble(in: 0...1000),
-                baseOrbitRadius: data?.orbitRadius ?? 0,
-                orbitRadius: data?.orbitRadius ?? 0,
-                orbitAngle: data?.orbitAngle ?? 0,
-                layer: data?.layer ?? 0,
-                shapeTarget: p,
-                baseSize: CGFloat(rng.nextDouble(in: 1.2...3.0)),
-                hueShift: CGFloat(rng.nextDouble(in: -0.08...0.08)),
-                brightness: CGFloat(rng.nextDouble(in: 0.5...1.3)),
-                pulseSpeed: CGFloat(rng.nextDouble(in: 0.5...2.5)),
-                pulsePhase: CGFloat(rng.nextDouble(in: 0...(.pi * 2)))
-            )
-        }
-    }
-    
-    /// Set a shape target for particles to try to form
-    func setShapeTarget(_ targets: [CGPoint]?, morphStrength: CGFloat) {
-        if let targets = targets {
-            shapeTargets = targets
-            targetMorphStrength = morphStrength
-            
-            // Assign shape targets to particles
-            for i in particles.indices {
-                if i < targets.count {
-                    particles[i].shapeTarget = targets[i]
-                }
-            }
-        } else {
-            shapeTargets = nil
-            targetMorphStrength = 0.0
-        }
-    }
-
     func update(dt: Double) {
         time += dt
         let dtf = CGFloat(dt)
@@ -166,31 +98,8 @@ final class ParticleSystem {
         // Can be sped up/slowed down via morphCycleSpeed
         morphPulsePhase += dtf * morphCycleSpeed
         
-        // Normalize to 0-1 for cycle position
-        let cyclePos = (morphPulsePhase.truncatingRemainder(dividingBy: CGFloat.pi * 2)) / (CGFloat.pi * 2)
-        
-        // Create plateau wave using smoothstep-like easing
-        let morphWave: CGFloat
-        if cyclePos < 0.15 {
-            // Rising phase (0 to 0.15) - smooth ease in
-            let t = cyclePos / 0.15
-            morphWave = smoothstep(t)
-        } else if cyclePos < 0.50 {
-            // Hold at peak (0.15 to 0.50) - stay at 1.0 with tiny wobble
-            let wobble = 0.02 * CGFloat(sin(time * 3.0))
-            morphWave = 1.0 + wobble
-        } else if cyclePos < 0.65 {
-            // Falling phase (0.50 to 0.65) - smooth ease out
-            let t = (cyclePos - 0.50) / 0.15
-            morphWave = 1.0 - smoothstep(t)
-        } else {
-            // Black hole phase (0.65 to 1.0) - stay near 0 with subtle pulse
-            let pulse = 0.05 * CGFloat(sin(time * 1.5))
-            morphWave = max(0, pulse)
-        }
-        
         // Apply morph strength with the wave
-        let morphPulse = currentMorphStrength * morphWave
+        let morphPulse = currentMorphStrength * morphWave(phase: morphPulsePhase, time: time, includesMotion: true)
         
         let center = blackHoleCenter
 
@@ -275,7 +184,7 @@ final class ParticleSystem {
                     let tangentY = toCenter.x / distFromCenter
                     
                     // Orbital speed based on layer
-                    let orbitSpeed: CGFloat = p.layer == 1 ? 25.0 : (p.layer == 2 ? 15.0 : 5.0)
+                    let orbitSpeed: CGFloat = p.layer.orbitalSpeed
                     
                     p.velocity.dx += tangentX * orbitSpeed * orbitFactor * dtf
                     p.velocity.dy += tangentY * orbitSpeed * orbitFactor * dtf
@@ -301,7 +210,7 @@ final class ParticleSystem {
     }
 
     private func fallInInfluence(for p: Particle) -> CGFloat {
-        guard p.layer == 2, fallInActivity > 0.05 else { return 0 }
+        guard p.layer == .accretionDisk, fallInActivity > 0.05 else { return 0 }
 
         let progress = CGFloat((time - fallInEventStartTime) / fallInEventDuration)
         guard progress >= 0, progress <= 1 else { return 0 }
@@ -366,7 +275,7 @@ final class ParticleSystem {
         let center = blackHoleCenter
         
         switch p.layer {
-        case 0:
+        case .eventHorizon:
             // Event horizon: slow swirl
             let baseSpeed: CGFloat = 0.15
             let speedVariation = 0.05 * CGFloat(sin(p.phase * 0.1))
@@ -379,7 +288,7 @@ final class ParticleSystem {
                 y: center.y + sin(p.orbitAngle) * pulseRadius
             )
             
-        case 1:
+        case .photonRing:
             // Photon ring: faster orbit
             let flare = flarePulse()
             let orbitSpeed: CGFloat = (1.8 + 0.3 * CGFloat(sin(p.phase * 0.5))) * speedMultiplier * (1.0 + photonFlashStrength * 0.35 + flare * 0.25)
@@ -393,7 +302,7 @@ final class ParticleSystem {
                 y: center.y + sin(p.orbitAngle) * effectiveRadius
             )
             
-        case 2:
+        case .accretionDisk:
             // Accretion disk
             let normalizedRadius = p.orbitRadius / (blackHoleRadius * 4.0)
             let fallIn = fallInInfluence(for: p)
@@ -434,7 +343,7 @@ final class ParticleSystem {
                 y: center.y + yr + lens
             )
             
-        case 3:
+        case .lensingRing:
             // Lensing ring: vertical ring perpendicular to main disk (Interstellar effect)
             let normalizedRadius = p.orbitRadius / (blackHoleRadius * 4.0)
             let baseOrbitSpeed: CGFloat = 1.8 / max(0.3, sqrt(normalizedRadius))
@@ -570,7 +479,7 @@ final class ParticleSystem {
         baseCtx.blendMode = .plusLighter
         
         // PASS 1: Draw BACK half of lensing ring (behind black hole)
-        for p in particles where p.layer == 3 {
+        for p in particles where p.layer == .lensingRing {
             // Back half: sin(orbitAngle) < 0 means particle is on far side
             if sin(p.orbitAngle) < 0 {
                 drawLensingRingParticle(p, in: baseCtx, center: center, visualMorphStrength: visualMorphStrength)
@@ -578,7 +487,7 @@ final class ParticleSystem {
         }
         
         // PASS 2: Draw layers 0, 1, 2 (event horizon particles, photon ring, accretion disk)
-        for p in particles where p.layer != 3 {
+        for p in particles where p.layer != .lensingRing {
             let individualPulse = 0.7 + 0.3 * CGFloat(sin(time * Double(p.pulseSpeed) + Double(p.pulsePhase)))
             
             // Distance from center for color calculation
@@ -591,7 +500,7 @@ final class ParticleSystem {
             // When morphing at high strength, particles become whiter/brighter (shape mode)
             let morphColorShift = visualMorphStrength
             
-            if p.layer == 0 {
+            if p.layer == .eventHorizon {
                 // Event horizon particles - use mode color, brighter when morphing
                 let pulse = 0.15 + 0.1 * individualPulse + visualMorphStrength * 0.4
                 let hue = colorHueBase + p.hueShift * 0.1  // Use mode-based hue
@@ -603,7 +512,7 @@ final class ParticleSystem {
                 
                 drawParticle(in: baseCtx, position: p.position, size: particleSize, glowSize: particleSize * 2.0, color: color, opacity: opacity, sharpness: morphColorShift)
                 
-            } else if p.layer == 1 {
+            } else if p.layer == .photonRing {
                 // Photon ring particles - use mode color, very bright when morphing
                 let flicker = 0.6 + 0.4 * individualPulse
                 let sparkle = max(0, sin(time * 8.0 + p.phase * 3.0))
@@ -630,7 +539,7 @@ final class ParticleSystem {
                 }
                 drawParticle(in: baseCtx, position: p.position, size: particleSize, glowSize: particleSize * 2.4, color: color, opacity: opacity, sharpness: morphColorShift)
                 
-            } else if p.layer == 2 {
+            } else if p.layer == .accretionDisk {
                 // Accretion disk particles - use configurable color scheme
                 // Convert HSB to RGB for the base color
                 let hue = colorHueBase
@@ -747,7 +656,7 @@ final class ParticleSystem {
         }
         
         // PASS 3: Draw FRONT half of lensing ring (in front of black hole)
-        for p in particles where p.layer == 3 {
+        for p in particles where p.layer == .lensingRing {
             // Front half: sin(orbitAngle) >= 0 means particle is on near side
             if sin(p.orbitAngle) >= 0 {
                 drawLensingRingParticle(p, in: baseCtx, center: center, visualMorphStrength: visualMorphStrength)

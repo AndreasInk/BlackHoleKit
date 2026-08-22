@@ -113,7 +113,7 @@ struct BlackHoleKitTests {
         #expect(result.particleData.count == 128)
         #expect(result.center == CGPoint(x: 100, y: 50))
         #expect(result.eventHorizonRadius == 10)
-        #expect(result.particleData.contains { $0.layer == 3 })
+        #expect(result.particleData.contains { $0.layer == .lensingRing })
     }
 
     @Test func particleSystemAdvancesFromInitialBlackHoleState() {
@@ -135,6 +135,47 @@ struct BlackHoleKitTests {
         #expect(system.time > 0)
         #expect(system.particles.count == 48)
         #expect(zip(initialPositions, system.particles.map(\.position)).contains { $0 != $1 })
+    }
+
+    @Test func particleInitializationPreservesTypedLayersAndShapeTargets() {
+        let points = [
+            CGPoint(x: 10, y: 10),
+            CGPoint(x: 20, y: 20),
+            CGPoint(x: 30, y: 30),
+            CGPoint(x: 40, y: 40)
+        ]
+        let layers: [ParticleSystem.ParticleLayer] = [
+            .eventHorizon, .photonRing, .accretionDisk, .lensingRing
+        ]
+        let data = layers.map {
+            ParticleSystem.ParticleData(orbitRadius: 12, orbitAngle: 0.5, layer: $0)
+        }
+        let system = ParticleSystem(seed: 11)
+        system.initializeAsBlackHole(points: points, particleData: data)
+
+        #expect(system.particles.map(\.layer) == layers)
+
+        let targets = points.map { CGPoint(x: $0.x + 100, y: $0.y + 100) }
+        system.setShapeTarget(targets, morphStrength: 0.95)
+        #expect(system.particles.map(\.shapeTarget) == targets)
+        #expect(system.targetMorphStrength == 0.95)
+
+        system.setShapeTarget(nil, morphStrength: 0)
+        #expect(system.targetMorphStrength == 0)
+        #expect(system.particles.map(\.shapeTarget) == targets)
+    }
+
+    @Test func morphWaveUsesSharedPlateauPhases() {
+        let system = ParticleSystem(seed: 12)
+        system.morphCycleSpeed = 1
+        system.setShapeTarget([.zero], morphStrength: 1)
+
+        system.update(dt: 1.0)
+
+        #expect(system.currentMorphWave > 0.99)
+        #expect(system.visualMorphStrength > 0.9)
+        #expect(system.morphWave(phase: CGFloat.pi * 1.15, time: 0, includesMotion: false) < 1)
+        #expect(system.morphWave(phase: CGFloat.pi * 1.5, time: 0, includesMotion: false) == 0)
     }
 
     @MainActor

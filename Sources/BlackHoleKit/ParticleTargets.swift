@@ -38,7 +38,7 @@ enum ParticleTargets {
             let r = holeR * 0.85 * sqrt(CGFloat(v))
             
             pts.append(CGPoint(x: c.x + cos(ang) * r, y: c.y + sin(ang) * r))
-            data.append(ParticleSystem.ParticleData(orbitRadius: r, orbitAngle: ang, layer: 0))
+            data.append(ParticleSystem.ParticleData(orbitRadius: r, orbitAngle: ang, layer: .eventHorizon))
         }
 
         // Photon ring: tight ring just outside event horizon
@@ -49,7 +49,7 @@ enum ParticleTargets {
             let r = photonR + jitter
             
             pts.append(CGPoint(x: c.x + cos(ang) * r, y: c.y + sin(ang) * r))
-            data.append(ParticleSystem.ParticleData(orbitRadius: r, orbitAngle: ang, layer: 1))
+            data.append(ParticleSystem.ParticleData(orbitRadius: r, orbitAngle: ang, layer: .photonRing))
         }
 
         // Accretion disk: distributed from inner to outer radius
@@ -72,7 +72,7 @@ enum ParticleTargets {
             let yr = x * sin(yaw) + y * cos(yaw)
             
             pts.append(CGPoint(x: c.x + xr, y: c.y + yr))
-            data.append(ParticleSystem.ParticleData(orbitRadius: r, orbitAngle: ang, layer: 2))
+            data.append(ParticleSystem.ParticleData(orbitRadius: r, orbitAngle: ang, layer: .accretionDisk))
         }
 
         // Lensing ring: perpendicular to main disk (Interstellar effect)
@@ -96,7 +96,7 @@ enum ParticleTargets {
             let y = sin(ang) * r * vertCompress  // narrow vertical
             
             pts.append(CGPoint(x: c.x + x, y: c.y + y))
-            data.append(ParticleSystem.ParticleData(orbitRadius: r, orbitAngle: ang, layer: 3))
+            data.append(ParticleSystem.ParticleData(orbitRadius: r, orbitAngle: ang, layer: .lensingRing))
         }
 
         // If we underfilled due to rounding, pad.
