@@ -5,6 +5,7 @@ SwiftUI package for the particle morph black hole effect.
 The package renders a CPU-driven particle field with SwiftUI `Canvas`. Particles orbit a procedural black hole and can periodically morph into text, SF Symbols, or a built-in classic Mac silhouette before falling back into the accretion flow. The built-in background uses a bundled Metal lens shader so the starfield bends and rotates with the black hole.
 
 
+https://github.com/user-attachments/assets/222dc574-0694-40db-b31b-60a0465600e3
 
 
 ## Installation
@@ -71,6 +72,7 @@ desktopPixels.blackHoleLens(
 )
 ```
 
+See [`Examples/BlackHoleEffectDemo`](Examples/BlackHoleEffectDemo) for a focused macOS sample that requests Screen Recording permission, captures the pixels behind its window, and applies the lens effect to them. The sample intentionally omits host-app behavior such as app consumption, restore scheduling, and production overlay controls.
 
 ## Platform Notes
 
@@ -86,8 +88,9 @@ The package focuses on the particle morph effect. Reflection shaders, overlays, 
 
 ## Verification
 
+Open the package to build the library and run its tests. To exercise real desktop distortion, open `Examples/BlackHoleEffectDemo/BlackHoleEffectDemo.xcodeproj`, run the `BlackHoleEffectDemo` scheme on My Mac, and grant Screen Recording permission when prompted.
 
-The tests cover defaults, source-compatible forwarding, configuration clamping, and all four particle/warp combinations. The previews cover checkerboards, fine grids, a deterministic photo-like fixture, translucent content, a corner lens, zero strength, and maximum cinematic settings. Live desktop validation still requires Screen Recording permission.
+The tests cover defaults, source-compatible forwarding, configuration clamping, deterministic particle behavior, and all four particle/warp combinations.
 
 ## License
 

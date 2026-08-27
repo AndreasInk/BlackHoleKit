@@ -1,0 +1,43 @@
+name: BlackHoleEffectDemo
+
+options:
+  bundleIdPrefix: com.andreasink
+  deploymentTarget:
+    macOS: "14.0"
+
+packages:
+  BlackHoleKit:
+    path: ../..
+
+targets:
+  BlackHoleEffectDemo:
+    type: application
+    platform: macOS
+    sources:
+      - Sources
+    info:
+      path: Info.plist
+      properties:
+        CFBundleDisplayName: BlackHoleEffectDemo
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        NSHighResolutionCapable: true
+        NSScreenCaptureUsageDescription: BlackHoleEffectDemo captures the display so the black hole can distort the pixels directly behind its window.
+    dependencies:
+      - package: BlackHoleKit
+      - sdk: ScreenCaptureKit.framework
+      - sdk: CoreImage.framework
+    settings:
+      base:
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_APP_SANDBOX: false
+        PRODUCT_BUNDLE_IDENTIFIER: com.andreasink.BlackHoleEffectDemo
+        SWIFT_STRICT_CONCURRENCY: complete
+        SWIFT_VERSION: "6.0"
+
+schemes:
+  BlackHoleEffectDemo:
+    build:
+      targets:
+        BlackHoleEffectDemo: all
+    run:
+      config: Debug

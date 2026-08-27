@@ -61,6 +61,7 @@ struct BlackHoleKitTests {
         }
     }
 
+    @MainActor
     @Test func lensConfigurationResolvesUnsafeValuesAndLegacyInitializer() {
         let configuration = BlackHoleLensConfiguration(
             radius: -20,

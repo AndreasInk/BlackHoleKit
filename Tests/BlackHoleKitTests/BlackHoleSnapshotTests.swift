@@ -24,7 +24,6 @@ struct BlackHoleSnapshotTests {
         system.blackHoleCenter = blackHole.center
         system.blackHoleRadius = blackHole.eventHorizonRadius
         system.particleScale = 0.72
-        system.spacetimeWarpStrength = 1.0
         system.spaceBackgroundStrength = 1.0
         system.lensingStrength = 1.15
         system.initializeAsBlackHole(
@@ -57,7 +56,9 @@ struct BlackHoleSnapshotTests {
             system.update(dt: 1.0 / 60.0)
         }
 
-        let lensStrength = max(0, system.spacetimeWarpStrength) * 0.58 * max(0, 1.0 - system.visualMorphStrength * 1.2)
+        let spacetimeWarpStrength: CGFloat = 1.0
+        let lensStrength = spacetimeWarpStrength * 0.58
+            * max(0, 1.0 - system.visualMorphStrength * 1.2)
         let lensVisibility = min(1, max(0, lensStrength / 0.58))
 
         let view = ZStack {

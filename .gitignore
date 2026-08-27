@@ -3,3 +3,6 @@
 .DS_Store
 xcuserdata/
 *.xcuserstate
+
+# Local product app; deliberately excluded from the open-source package.
+/Internal/
