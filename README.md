@@ -4,9 +4,7 @@ SwiftUI package for the particle morph black hole effect.
 
 The package renders a CPU-driven particle field with SwiftUI `Canvas`. Particles orbit a procedural black hole and can periodically morph into text, SF Symbols, or a built-in classic Mac silhouette before falling back into the accretion flow. The built-in background uses a bundled Metal lens shader so the starfield bends and rotates with the black hole.
 
-
-https://github.com/user-attachments/assets/222dc574-0694-40db-b31b-60a0465600e3
-
+[Watch the original macOS desktop prototype on X](https://x.com/AndreasInk/status/2099759676246167956).
 
 ## Installation
 
